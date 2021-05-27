@@ -1,0 +1,12 @@
+Classifier,Language,Accuracy Trial 1,Accuracy Trial 2,Accuracy Trial 3,Average
+Logistic Regression,R,0.68699,0.70596,0.6768,0.6899166667
+Binary Tree,R,0.6735,0.6705,0.6776,0.6738666667
+SGD Classifier,Python,0.62466,0.64499,0.66734,0.6456633333
+Random Forest,Python,0.67073,0.66938,0.68021,0.67344
+Roulette Classifier,Python,0.68089,0.68564,0.65989,0.6754733333
+SVM Classifier,Python,0.68428,0.70325,0.68428,0.6906033333
+K Neighbors Classifier,Python,0.63956,0.65854,0.6416,0.6465666667
+Decision Tree,Python,0.62195,0.65176,0.6145,0.6294033333
+Voting Classifier,Python,0.67547,0.68767,0.68157,0.68157
+Bagging Classifier,Python,0.68224,0.69106,0.66463,0.67931
+Ada Boost Classifier,Python,0.68089,0.68564,0.65989,0.6754733333

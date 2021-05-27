@@ -1,0 +1,96 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+## Load up some packages we will be using for Decision Trees
+library(caTools)
+library(rpart)
+library(rattle)
+library(rpart.plot)
+library(RColorBrewer)
+library(caret) 
+library(tidyverse)
+```
+
+
+```{r}
+fight_data <- read.csv("data/fight_train.csv")
+```
+
+1. Split your data using a 2/3 training and 1/3 test split
+```{r}
+fight_data <- fight_data %>%
+  select(colnames(fight_data_final)[-43], Winner)
+
+set.seed(5)
+d_sample <- sample.split(fight_data$Winner,SplitRatio=0.67)
+fight_train <- subset(fight_data,d_sample==TRUE)
+fight_test <- subset(fight_data,d_sample==FALSE)
+```
+
+
+```{r}
+#fight_data_fit <- fight_data %>%
+#  select(-c(X, location, R_Stance, B_Stance, Referee, date, Winner, weight_class, R_fighter, B_fighter))
+```
+
+
+2. Create a full decision tree with your Training Data. Outcome is your class label and all other variables can be used as attributes of your model
+```{r}
+
+fight_tree <- rpart(Winner ~ ., data=fight_train, method = "class",
+                     parms = list(split = 'information'),cp=-1)
+fight_tree
+```
+
+
+3. Create the graphic of the decision tree you just made
+```{r}
+fancyRpartPlot(fight_tree)
+```
+
+
+
+4. Test the Accuracy of this model of with Test Data
+```{r}
+pred <-predict(fight_tree,fight_test,type = "class")
+conf <- table(pred,fight_test$Winner)
+confusionMatrix(conf)
+confusionMatrix(conf)$byClass
+```
+
+
+5. Create a post-pruned decision tree with your Training Data with the graphic. Use 
+```{r}
+printcp(fight_tree)
+plotcp(fight_tree)
+cp = fight_tree$cptable[which.min(fight_tree$cptable[,"xerror"]),"CP"]
+```
+
+## Fit the Model
+```{r}
+post_fight_tree <- rpart(Winner ~ ., data=fight_train, method = "class",
+             parms = list(split = 'information'),cp=cp)
+post_fight_tree
+```
+
+```{r}
+fancyRpartPlot(post_fight_tree)
+```
+
+6. Test the accuracy of your post-pruned tree with the Test Data. Did we improve the fit of the model by pruning?
+
+
+## Make the Predictions
+```{r}
+post_pred<-predict(post_fight_tree,fight_test,type = "class")
+```
+
+## Measures of Fit
+```{r}
+post_conf <- table(post_pred,fight_test$Winner)
+confusionMatrix(post_conf)
+confusionMatrix(post_conf)$byClass
+```

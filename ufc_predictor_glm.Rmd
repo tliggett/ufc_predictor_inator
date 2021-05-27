@@ -1,0 +1,154 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r setup}
+library("car")
+library("DescTools")
+library("tidyverse")
+library("ggplot2")
+```
+
+
+
+```{r}
+fight_data <- read.csv("data/fight_train.csv")
+```
+
+
+1.    Inspect the data for any extreme, missing, or non-typical values. Everything should be either numerical and an expected range or categorical with expected responses.
+
+```{r}
+summary(fight_data)
+```
+
+2.    Transform any of the categorical factors to a binary variable.
+
+```{r}
+fight_data$redWin = 0
+fight_data$redWin[fight_data$Winner=="Red"] = 1
+
+fight_data$title_bout <- as.integer(as.logical(fight_data$title_bout))
+
+```
+
+```{r}
+colnames(fight_data)
+```
+
+
+```{r}
+fight_data_fit <- fight_data %>%
+  select(-c(X, Winner, B_avg_LEG_att, B_avg_LEG_landed, B_avg_opp_LEG_att, B_avg_opp_LEG_landed, B_avg_GROUND_att, B_avg_GROUND_landed, B_avg_opp_GROUND_att, B_avg_opp_GROUND_landed, B_draw, R_avg_LEG_att, R_avg_LEG_landed, R_avg_opp_LEG_att, R_avg_opp_LEG_landed, R_avg_GROUND_att,
+R_avg_GROUND_landed, R_avg_opp_GROUND_att, R_avg_opp_GROUND_landed, R_draw, weight_class_WomenStrawweight, B_Stance_Switch, R_Stance_Switch, R_Stance_Sideways))
+```
+
+
+3.    Create an initial logistic regression model with Default as your dependent variable and all of the other variables as independent.
+
+```{r}
+fit<-glm(redWin~.,data=fight_data_fit,family=binomial)
+summary(fit)
+```
+
+4.    Check the VIF and drop any variables that are causing multicollinearity issues.
+
+```{r}
+create_df_trim_vifs <- function(df){
+  fit<-glm(redWin~.,data=df,family=binomial)
+  fight_vifs <- as.vector(vif(fit))
+  list <- as.list(vif(fit))
+  high_vif <- max(fight_vifs)
+  if(high_vif > 75)
+  {
+    index <- match(high_vif,fight_vifs)
+    remove_column <- names(list)[index]
+    df <- df %>%
+      select(-c(remove_column))
+    return(create_df_trim_vifs(df))
+  }
+  return(df)
+}
+
+df <- fight_data_fit
+fight_data_vif <- create_df_trim_vifs(df)
+fit<-glm(redWin~.,data=fight_data_vif,family=binomial)
+summary(fit)
+
+```
+
+```{r}
+create_fit_trim_p <- function(df){
+  fit<-glm(redWin~.,data=df,family=binomial)
+  p_values <- coef(summary(fit))[,4]
+  p_values <- p_values[-1]
+  high_p_value <- max(p_values)
+  if(high_p_value >  0.1)
+  {
+    index <- match(high_p_value, p_values)
+    remove_column <- names(p_values)[index]
+    df <- df %>%
+      select(-c(remove_column))
+    return(create_fit_trim_p(df))
+  }
+  return(df)
+}
+
+df <- fight_data_vif
+fight_data_final <- create_fit_trim_p(df)
+fit<-glm(redWin~.,data=fight_data_final,family=binomial)
+summary(fit)
+PseudoR2(fit)
+```
+
+
+
+
+
+6.    Report the fit of your model.
+```{r}
+PseudoR2(fit)
+```
+
+```{r}
+test_data <- read.csv("data/fight_test.csv")
+
+test_data$redWin = 0
+test_data$redWin[test_data$Winner=="Red"] = 1
+
+test_data$title_bout <- as.integer(as.logical(test_data$title_bout))
+
+test_data$PREDICT <- predict(fit, test_data, type="response")
+```
+
+
+```{r}
+test_data$Prediction <- round(test_data$PREDICT)
+
+test_data$correct_pred = 0
+test_data$correct_pred[test_data$Prediction == test_data$redWin] = 1
+
+results <- test_data %>%
+  select(PREDICT, Prediction, redWin, correct_pred) %>%
+  drop_na()
+
+percent_correct <- sum(results$correct_pred) / nrow(results)
+percent_correct
+```
+
+So our logistic regression in R was able to predict about 67.5% of the fights correctly.
+
+
+
+```{r}
+results <- read.csv("data/results.csv")
+
+ggplot(data = results) +
+  geom_bar(stat = "identity", mapping = aes(x=reorder(Classifier,Average), y = Average, fill=Language)) +
+  labs(title = "Accuracy of Classifiers at Predicting UFC Fights", x = "Classifier Algorithm", y="Average Accuracy") +
+  theme_bw() +
+  theme(legend.position = "none") + 
+  coord_flip()
+```
+
